@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PhoneMapper">
+	
+	<!--表名 -->
+	<sql id="tableName">
+		BS_PHONE
+	</sql>
+	
+	<!-- 字段 -->
+	<sql id="Field">
+		CPHONE,	
+		MAIN_LINE,	
+		BACK_LINE,	
+		USER_ID,	
+		PHONE_ID,
+		REMARK,
+		utime
+	</sql>
+	
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{CPHONE},	
+		#{MAIN_LINE},	
+		#{BACK_LINE},	
+		#{USER_ID},	
+		#{PHONE_ID},
+		#{REMARK},
+		now()
+	</sql>
+	
+	<!-- 新增-->
+	<insert id="save" parameterType="pd">
+		insert into 
+	<include refid="tableName"></include>
+		(
+	<include refid="Field"></include>
+		) values (
+	<include refid="FieldValue"></include>
+		)
+	</insert>
+	
+	<!-- 删除-->
+	<delete id="delete" parameterType="pd">
+		delete from
+		<include refid="tableName"></include>
+		where 
+			PHONE_ID = #{PHONE_ID}
+	</delete>
+	<!-- 修改 -->
+	<update id="deleteUser" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set 
+			USER_ID = null,
+			STATUS=0,
+		PHONE_ID = PHONE_ID
+		where 
+		CPHONE = #{CPHONE}
+	</update>
+	<!-- 修改 -->
+	<update id="updateUser" parameterType="pd">
+		update
+		sys_user
+		set 
+			cphone = null
+		where 
+		 cphone = #{CPHONE}
+		
+	</update>
+	<!-- 修改 -->
+	<update id="updateUserCPhone" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set 
+		<if test="STATUS != null">
+			STATUS = #{STATUS},
+			</if>
+			<if test="CPHONE != null">
+				CPHONE = #{CPHONE},
+			</if>
+			USER_ID = #{USER_ID}
+		where 
+		 USER_ID = #{USER_ID}
+		
+	</update>
+	
+	
+	<!-- 修改 -->
+	<update id="edit" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set 
+		<if test="CPHONE != null">
+			CPHONE = #{CPHONE},
+			</if>
+			<if test="MAIN_LINE != null">
+			MAIN_LINE = #{MAIN_LINE},
+			</if>
+			<if test="BACK_LINE != null">
+			BACK_LINE = #{BACK_LINE},
+			</if>
+			<if test="USER_ID != null">
+			USER_ID = #{USER_ID},
+			</if>
+			<if test="STATUS != null">
+			STATUS = #{STATUS},
+			</if>
+			<if test="REMARK != null">
+			REMARK = #{REMARK},
+			</if>
+		utime = now(),	
+		PHONE_ID = PHONE_ID
+		where 
+		PHONE_ID = #{PHONE_ID}
+	</update>
+	
+	<!-- 通过ID获取数据 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select 
+		<include refid="Field"></include>
+		from 
+		<include refid="tableName"></include>
+		where 
+			PHONE_ID = #{PHONE_ID}
+	</select>
+	<select id="listUsersByDID" parameterType="pd" resultType="pd">
+		select 
+		u.user_id userId,
+		u.name name
+		from sys_user u
+		inner join bs_department_station_user dsu on dsu.user_id = u.user_id 
+		where dsu.department_id = #{departmentId}
+	</select>
+	<!-- 列表 -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		select
+		distinct
+		p.CPHONE,	
+		p.MAIN_LINE,	
+		p.BACK_LINE,	
+		p.USER_ID,	
+		p.PHONE_ID,
+		p.REMARK,
+		p.utime,
+		u.NAME,
+		u.OFFICE_NO,
+		d.DEPARTMENT_NAME
+		from 
+		<include refid="tableName"></include> p
+		left join sys_user u on u.user_id = p.user_id
+		left join bs_department_station_user dsu on dsu.user_id = p.user_id
+		left join bs_department d on d.department_id = dsu.department_id
+		where 1=1
+		<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+				(
+				u.NAME like CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				or p.CPHONE like CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				<!--	根据需求自己加检索条件
+					字段1 LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+					 or 
+					字段2 LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') 
+				-->
+				)
+		</if>
+		<if test="pd.STATUS != null">
+			and p.status = #{pd.STATUS}
+		</if>
+		order by p.utime desc
+	</select>
+	
+	<!-- 列表(全部) -->
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from 
+		<include refid="tableName"></include>
+	</select>
+	
+	<!-- 批量删除 -->
+	<delete id="deleteAll" parameterType="String">
+		delete from
+		<include refid="tableName"></include>
+		where 
+			PHONE_ID in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+                 #{item}
+		</foreach>
+	</delete>
+	
+	<!-- fh313596790qq(青苔) -->
+</mapper>

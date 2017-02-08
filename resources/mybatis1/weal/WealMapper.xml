@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="WealMapper">
+	
+	<!--表名 -->
+	<sql id="tableName">
+		BS_WEAL
+	</sql>
+	
+	<!-- 字段 -->
+	<sql id="Field">
+		INFOR,	
+		CTIME,	
+		TITLE,	
+		WEAL_ID,
+		USER_ID,
+		imgurl
+	</sql>
+	
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{INFOR},	
+		#{CTIME},	
+		#{TITLE},	
+		#{WEAL_ID},
+		#{USER_ID},
+		#{imgurl}
+	</sql>
+	
+	<!-- 新增-->
+	<insert id="save" parameterType="pd">
+		insert into 
+	<include refid="tableName"></include>
+		(
+	<include refid="Field"></include>
+		) values (
+	<include refid="FieldValue"></include>
+		)
+	</insert>
+	
+	<!-- 删除-->
+	<delete id="delete" parameterType="pd">
+		delete from
+		<include refid="tableName"></include>
+		where 
+			WEAL_ID = #{WEAL_ID}
+	</delete>
+	
+	<!-- 修改 -->
+	<update id="edit" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set 
+			status = #{STATUS},
+		WEAL_ID = WEAL_ID
+		where 
+		WEAL_ID = #{WEAL_ID}
+	</update>
+	
+	<!-- 通过ID获取数据 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select 
+		<include refid="Field"></include>
+		from 
+		<include refid="tableName"></include>
+		where 
+			WEAL_ID = #{WEAL_ID}
+	</select>
+	<!-- 列表 -->
+	<select id="dataUserlistPage" parameterType="page" resultType="pd">
+		select
+		w.TITLE,	
+		u.NAME,	
+		u.PHONE,	
+		u.OFFICE_NO,
+		d.DEPARTMENT_NAME
+		from 
+		sys_user u
+		inner join bs_weal_user wu on wu.user_id = u.user_id and wu.type = 2<!-- 报名 -->
+		inner join bs_weal w on w.weal_id = wu.weal_id
+		inner join bs_department_station_user dsu on dsu.user_id = u.user_id
+		inner join bs_department d on d.department_id = dsu.department_id
+		where 1=1
+		<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and(
+					w.TITLE LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+					OR 
+					u.NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+					)
+		</if>
+		<if test="pd.wealId!= null and pd.wealId != ''"><!-- 关键词检索 -->
+			and
+					wu.weal_id = #{pd.wealId}
+		</if>
+		order by wu.ctime desc
+	</select>
+	<!-- 列表 -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		select
+		w.INFOR,	
+		w.CTIME,	
+		w.TITLE,	
+		w.WEAL_ID,
+		ifnull(count(wu.user_id),0) COUNT,
+		w.imgurl
+		from 
+		<include refid="tableName"></include> w
+		left join bs_weal_user wu on wu.weal_id = w.weal_id and wu.type = 2<!-- 报名 -->
+		where w.status = #{pd.STATUS}
+		<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+				(
+				<!--	根据需求自己加检索条件
+					字段1 LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+					 or 
+					字段2 LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') 
+				-->
+				)
+		</if>
+		<if test="pd.WEAL_ID!= null and pd.WEAL_ID != ''"><!-- 关键词检索 -->
+			and
+					w.weal_id = #{pd.WEAL_ID}
+		</if>
+		Group by w.weal_id
+		order by w.ctime desc
+	</select>
+	
+	<!-- 列表(全部) -->
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from 
+		<include refid="tableName"></include>
+	</select>
+	
+	<!-- 批量删除 -->
+	<delete id="deleteAll" parameterType="String">
+		delete from
+		<include refid="tableName"></include>
+		where 
+			WEAL_ID in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+                 #{item}
+		</foreach>
+	</delete>
+	
+	<!-- fh313596790qq(青苔) -->
+</mapper>

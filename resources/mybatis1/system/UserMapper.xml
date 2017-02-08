@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserMapper">
+
+	<resultMap type="User" id="userAndRoleResultMap">
+		<id column="USER_ID" property="USER_ID" />
+		<result column="USERNAME" property="USERNAME" />
+		<result column="PASSWORD" property="PASSWORD" />
+		<result column="NAME" property="NAME" />
+		<result column="RIGHTS" property="RIGHTS" />
+		<result column="LAST_LOGIN" property="LAST_LOGIN" />
+		<result column="IP" property="IP" />
+		<result column="STATUS" property="STATUS" />
+		<result column="SKIN" property="SKIN" />
+		<association property="role" column="ROLE_ID" javaType="Role">
+			<id column="ROLE_ID" property="ROLE_ID" />
+			<result column="ROLE_NAME" property="ROLE_NAME" />
+			<result column="ROLE_RIGHTS" property="RIGHTS" />
+		</association>
+	</resultMap>
+	<resultMap type="User" id="userResultMap">
+		<id column="USER_ID" property="USER_ID" />
+		<result column="USERNAME" property="USERNAME" />
+		<result column="PASSWORD" property="PASSWORD" />
+		<result column="NAME" property="NAME" />
+		<result column="RIGHTS" property="RIGHTS" />
+		<result column="LAST_LOGIN" property="LAST_LOGIN" />
+		<result column="IP" property="IP" />
+		<result column="STATUS" property="STATUS" />
+		<result column="ROLE_ID" property="ROLE_ID" />
+		<result column="SKIN" property="SKIN" />
+	</resultMap>
+
+	<!--表名 -->
+	<sql id="tableName">
+		SYS_USER
+	</sql>
+	<sql id="roleTableName">
+		SYS_ROLE
+	</sql>
+
+	<!-- 字段 -->
+	<sql id="Field">
+		USER_ID,
+		USERNAME,
+		PASSWORD,
+		NAME,
+		RIGHTS,
+		ROLE_ID,
+		LAST_LOGIN,
+		IP,
+		STATUS,
+		BZ,
+		SKIN,
+		EMAIL,
+		NUMBER,
+		PHONE
+	</sql>
+
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{USER_ID},
+		#{USERNAME},
+		#{PASSWORD},
+		#{NAME},
+		#{RIGHTS},
+		#{ROLE_ID},
+		#{LAST_LOGIN},
+		#{IP},
+		#{STATUS},
+		#{BZ},
+		#{SKIN},
+		#{EMAIL},
+		#{NUMBER},
+		#{PHONE}
+	</sql>
+
+	<!-- 判断用户名和密码 -->
+	<select id="getUserInfo" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where 1=1
+		<if test="USERNAME!=null and PASSWORD!=null">
+			and USERNAME = #{USERNAME} and PASSWORD=#{PASSWORD}
+		</if>
+		<if test="USER_ID!=null and USER_ID>0">
+			and USER_ID = #{USER_ID}
+		</if>
+	</select>
+
+	<!-- 更新登录时间 -->
+	<update id="updateLastLogin" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		LAST_LOGIN = #{LAST_LOGIN}
+		where USER_ID = #{USER_ID}
+	</update>
+
+	<!-- 通过用户ID获取用户信息和角色信息 -->
+	<select id="getUserAndRoleById" parameterType="String" resultMap="userAndRoleResultMap">
+		select u.USER_ID,
+		u.USERNAME,
+		u.NAME,
+		u.RIGHTS as USER_RIGHTS,
+		u.PASSWORD,
+		u.SKIN,
+		r.ROLE_ID,
+		r.ROLE_NAME,
+		r.RIGHTS as ROLE_RIGHTS
+		from
+		<include refid="tableName"></include>
+		u
+		left join
+		<include refid="roleTableName"></include>
+		r
+		on u.ROLE_ID=r.ROLE_ID
+		where u.STATUS=1
+		and u.USER_ID=#{USER_ID}
+	</select>
+
+	<!-- 通过USERNAME获取数据 -->
+	<select id="findByUsername" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where
+		USERNAME = #{USERNAME}
+	</select>
+
+	<!-- 存入IP -->
+	<update id="saveIP" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		IP = #{IP}
+		where
+		USERNAME = #{USERNAME}
+	</update>
+
+	<!-- 列出某角色下的所有用户 -->
+	<select id="listAllUserByRoldId" parameterType="pd" resultType="pd">
+		select USER_ID
+		from
+		<include refid="tableName"></include>
+		where
+		ROLE_ID = #{ROLE_ID}
+	</select>
+
+	<!-- 用户列表 -->
+	<select id="userlistPage" parameterType="page" resultType="map">
+		select
+		distinct
+		u.PHONE,
+		u.ROLE_ID,
+		r.ROLE_NAME,
+		u.OFFICE_NO,
+		u.CPHONE,
+		u.FLOOR,
+		u.AREA,
+		u.`STATUS`,
+		dsu.DEPARTMENT_ID,
+		d.DEPARTMENT_NAME,
+		u.USER_ID,
+		u.USERNAME,
+		u.PASSWORD,
+		u.LAST_LOGIN,
+		u.NAME,
+		u.EMAIL,
+		u.NUMBER
+		from
+		sys_user u
+		LEFT join sys_role r on r.ROLE_ID = u.ROLE_ID
+		LEFT JOIN
+		bs_department_station_user AS dsu ON dsu.USER_ID = u.USER_ID
+		LEFT JOIN bs_department AS d ON d.department_id = dsu.department_id
+		where u.USERNAME !=
+		'admin'
+		<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			u.NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			or
+			u.PHONE LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.ROLE_ID != null and pd.ROLE_ID != ''"><!-- 角色检索 -->
+			and u.ROLE_ID=#{pd.ROLE_ID}
+		</if>
+		<if test="pd.STATUS != null and pd.STATUS != ''"><!-- 角色检索 -->
+			and u.STATUS=#{pd.STATUS}
+		</if>
+		<if test="pd.lastLoginStart!=null and pd.lastLoginStart!=''"><!-- 登录时间检索 -->
+			and u.LAST_LOGIN &gt;= #{pd.lastLoginStart}
+		</if>
+		<if test="pd.lastLoginEnd!=null and pd.lastLoginEnd!=''"><!-- 登录时间检索 -->
+			and u.LAST_LOGIN &lt;= #{pd.lastLoginEnd}
+		</if>
+		order by u.status asc,u.utime desc
+	</select>
+
+	<!-- 通过邮箱获取数据 -->
+	<select id="findByUE" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where
+		EMAIL = #{EMAIL}
+		<if test="USERNAME != null and USERNAME != ''">
+			and USERNAME != #{USERNAME}
+		</if>
+	</select>
+
+	<!-- 通过编号获取数据 -->
+	<select id="findByUN" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where
+		NUMBER = #{NUMBER}
+		<if test="USERNAME != null and USERNAME != ''">
+			and USERNAME != #{USERNAME}
+		</if>
+	</select>
+
+	<!-- 通过user_id获取数据 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select
+		distinct
+		u.PHONE,
+		u.OFFICE_NO,
+		u.CPHONE,
+		u.FLOOR,
+		u.AREA,
+		u.SIGN,
+		u.`STATUS`,
+		u.USER_ID,
+		u.USERNAME,
+		u.PASSWORD,
+		u.LAST_LOGIN,
+		u.NAME,
+		u.EMAIL,
+		u.NUMBER,
+		dsu.DEPARTMENT_ID,
+		dsu.STATION_ID,
+		u.ROLE_ID,
+		dsu.STATION_ID,
+		u.POSITION
+		from
+		<include refid="tableName"></include>
+		u
+		LEFT JOIN bs_department_station_user AS dsu ON dsu.user_id = u.USER_ID
+		where
+		u.USER_ID = #{USER_ID}
+	</select>
+
+	<!-- 新增用户 -->
+	<insert id="saveU" parameterType="pd">
+		insert into
+		<include refid="tableName"></include>
+		(
+		<include refid="Field"></include>
+		) values (
+		<include refid="FieldValue"></include>
+		)
+	</insert>
+	<update id="editStatusAndRole" parameterType="pd">
+		update sys_user set
+		<if test="STATUS != null">STATUS = #{STATUS} ,</if>
+		<if test="CPHONE != null">CPHONE = #{CPHONE} ,</if>
+		<if test="ROLE_ID != null">ROLE_ID = #{ROLE_ID} ,</if>
+		USER_ID = #{USER_ID}, utime=now() where USER_ID = #{USER_ID}
+	</update>
+	<update id="editUnion" parameterType="pd">
+		update bs_department_station_user set
+		<if test="DEPARTMENT_ID != null">DEPARTMENT_ID = #{DEPARTMENT_ID} ,</if>
+
+		<if test="STATION_ID != null">STATION_ID = #{STATION_ID} ,</if>
+		USER_ID = #{USER_ID} where USER_ID = #{USER_ID}
+	</update>
+	<!-- 修改 -->
+	<update id="editU" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set NAME = #{NAME},
+		ROLE_ID = #{ROLE_ID},
+		BZ = #{BZ},
+		EMAIL = #{EMAIL},
+		NUMBER = #{NUMBER},
+		PHONE = #{PHONE},
+		CPHONE=#{CPHONE},
+		FLOOR = #{FLOOR},
+		AREA =
+		#{AREA},
+		OFFICE_NO = #{OFFICE_NO},
+		SIGN = #{SIGN},
+		POSITION=#{POSITION},
+		utime = now()
+		<if test="PASSWORD != null and PASSWORD != ''">
+			,PASSWORD = #{PASSWORD}
+		</if>
+		where
+		USER_ID = #{USER_ID}
+	</update>
+
+	<!-- 删除用户 -->
+	<delete id="deleteU" parameterType="pd" flushCache="false">
+		delete from
+		<include refid="tableName"></include>
+		where
+		USER_ID = #{USER_ID}
+		and
+		USER_ID != '1'
+	</delete>
+
+	<!-- 批量删除用户 -->
+	<delete id="deleteAllU" parameterType="String">
+		delete from
+		<include refid="tableName"></include>
+		where
+		USER_ID in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+		and
+		USER_ID != '1'
+	</delete>
+
+	<!-- 用户列表(全部) -->
+	<select id="listAllUser" parameterType="pd" resultType="pd">
+		select u.USER_ID,
+		u.USERNAME,
+		u.PASSWORD,
+		u.LAST_LOGIN,
+		u.NAME,
+		u.IP,
+		u.EMAIL,
+		u.NUMBER,
+		u.PHONE,
+		r.ROLE_ID,
+		r.RIGHTS,
+		r.ROLE_NAME
+		from
+		<include refid="tableName"></include>
+		u,
+		<include refid="roleTableName"></include>
+		r
+		where u.ROLE_ID = r.ROLE_ID
+		and u.USERNAME != 'admin'
+		and r.PARENT_ID = '1'
+		<if test="keywords!= null and keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			u.USERNAME LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			u.EMAIL LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			u.NUMBER LIKE CONCAT(CONCAT('%',
+			#{keywords}),'%')
+			or
+			u.NAME LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			or
+			u.PHONE LIKE CONCAT(CONCAT('%', #{keywords}),'%')
+			)
+		</if>
+		<if test="ROLE_ID != null and ROLE_ID != ''"><!-- 角色检索 -->
+			and u.ROLE_ID=#{ROLE_ID}
+		</if>
+		<if test="STATUS != null and STATUS != ''"><!-- 角色检索 -->
+			and u.STATUS=#{STATUS}
+		</if>
+		<if test="lastLoginStart!=null and lastLoginStart!=''"><!-- 登录时间检索 -->
+			and u.LAST_LOGIN &gt;= #{lastLoginStart}
+		</if>
+		<if test="lastLoginEnd!=null and lastLoginEnd!=''"><!-- 登录时间检索 -->
+			and u.LAST_LOGIN &lt;= #{lastLoginEnd}
+		</if>
+		order by u.LAST_LOGIN desc
+	</select>
+
+	<!-- 获取总数 -->
+	<select id="getUserCount" parameterType="String" resultType="pd">
+		select
+		(select count(USER_ID) from <include refid="tableName"></include>) userCount,
+		(select count(USER_ID) from <include refid="tableName"></include> where status = '1' and username != 'admin') activeUserCount,
+		(select count(USER_ID) from <include refid="tableName"></include> where status = '0' and username != 'admin') noActiveUserCount,
+		(select count(distinct user_id) from bs_login where ctime &lt;=DATE_FORMAT(now(),'%Y-%m-%d %H:%i:%s') and ctime &gt;=DATE_FORMAT(now(),'%Y-%m-%d 00:00:00')) hotUserCount,
+		(select count(1) from bs_meeting) - (select count(m.meeting_id) from bs_meeting m inner join bs_distribute d on d.rid = m.meeting_id) meetingCount,
+		(select count(1) from bs_order) - (select count(m.order_id) from bs_order m inner join bs_distribute d on d.rid = m.order_id) orderCount		
+	</select>
+	<!-- 获取总数 -->
+	<select id="getUserCountByCondition" parameterType="pd" resultType="pd">
+		select
+		ifnull(count(USER_ID),0) userCount
+		from
+		<include refid="tableName"></include>
+		where USERNAME != 'admin'
+		<if test="status != null and status != ''">
+			and status = #{status}
+		</if>
+	</select>
+	<select id="queryActiveCount" parameterType="pd" resultType="pd">
+		select count(1) count from (
+		select l.user_id,count(DISTINCT cdate) from bs_login l 
+		inner join sys_user u on u.user_id = l.user_id
+		where 1 =1 
+		<if test="startDate != null">
+			and cdate &gt;= #{startDate}
+		</if>
+		<if test="endDate != null">
+			and cdate &lt;= #{endDate}
+		</if>
+		GROUP BY l.user_id HAVING count(DISTINCT cdate) &gt;= #{count}
+		) tmp 
+	</select>
+	<select id="dataActivelistPage" parameterType="page" resultType="pd">
+		select l.user_id userId,u.name name,u.phone,u.office_no officeNo,u.cphone,d.department_name departmentName from bs_login l
+		inner join sys_user u on u.user_id = l.user_id
+		LEFT JOIN
+		bs_department_station_user AS dsu ON dsu.USER_ID = u.USER_ID
+		LEFT JOIN bs_department AS d ON d.department_id = dsu.department_id
+		where 1 =1 
+		<if test="pd.startDate != null">
+			and cdate &gt;= #{pd.startDate}
+		</if>
+		<if test="pd.endDate != null">
+			and cdate &lt;= #{pd.endDate}
+		</if>
+		GROUP BY l.user_id
+		<if test="pd.status != null and pd.status == 1">
+			 HAVING count(DISTINCT cdate) &gt;= #{pd.count}
+		</if>
+		<if test="pd.status != null and pd.status == 2">
+			HAVING count(DISTINCT cdate) &lt; #{pd.count}
+			union
+			select u.user_id userId,u.name name,u.phone,u.office_no officeNo,u.cphone,d.department_name departmentName from sys_user u
+			LEFT JOIN
+			bs_department_station_user AS dsu ON dsu.USER_ID = u.USER_ID
+			LEFT JOIN bs_department AS d ON d.department_id = dsu.department_id
+			where u.USERNAME != 'admin' and not EXISTS (select 1 from bs_login l where l.user_id = u.user_id)
+		</if>
+		
+	</select>
+	<select id="listUsersBySId" parameterType="pd" resultType="pd">
+		select u.user_id userId,
+		u.name name
+		from sys_user u
+		inner join bs_department_station_user dsu on dsu.user_id = u.user_id
+		where 1=1
+		<if test="stationId != null">
+			and dsu.station_id = #{stationId}
+		</if>
+		<if test="departmentId != null">
+			and dsu.department_id = #{departmentId}
+		</if>
+		<if test="isFind"><!-- 运维角色ID -->
+			and u.role_id = '36275eac4fc14650a70eeaa59fa4e3f0'
+		</if>
+	</select>
+	<!-- fh313596790qq(青苔) -->
+</mapper>

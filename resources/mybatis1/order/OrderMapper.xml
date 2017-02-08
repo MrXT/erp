@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="OrderMapper">
+
+	<!--表名 -->
+	<sql id="tableName">
+		BS_ORDER
+	</sql>
+
+	<!-- 字段 -->
+	<sql id="Field">
+		INFOR,
+		MATERIAL_NAMES,
+		CTIME,
+		USER_ID,
+		SERVICETYPE_ID,
+		MATERIALNAME_IDS,
+		ORDER_ID
+	</sql>
+
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{INFOR},
+		#{MATERIAL_NAMES},
+		#{CTIME},
+		#{USER_ID},
+		#{SERVICETYPE_ID},
+		#{MATERIALNAME_IDS},
+		#{ORDER_ID}
+	</sql>
+
+	<!-- 新增 -->
+	<insert id="save" parameterType="pd">
+		insert into
+		<include refid="tableName"></include>
+		(
+		<include refid="Field"></include>
+		) values (
+		<include refid="FieldValue"></include>
+		)
+	</insert>
+
+	<!-- 删除 -->
+	<!-- 删除 -->
+	<delete id="delete" parameterType="pd">
+		<if test="type==1">
+			delete from
+			bs_distribute
+			where
+			rid = #{ORDER_ID}
+		</if>
+		<if test="type==2">
+			delete from
+			<include refid="tableName"></include>
+			where
+			ORDER_ID = #{ORDER_ID}
+		</if>
+	</delete>
+	<!-- 修改 -->
+	<update id="edit" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		INFOR = #{INFOR},
+		MATERIAL_NAMES = #{MATERIAL_NAMES},
+		CTIME = #{CTIME},
+		USER_ID = #{USER_ID},
+		SERVICETYPE_ID = #{SERVICETYPE_ID},
+		MATERIALNAME_IDS =
+		#{MATERIALNAME_IDS},
+		ORDER_ID = ORDER_ID
+		where
+		ORDER_ID = #{ORDER_ID}
+	</update>
+	<select id="eval" parameterType="pd" resultType="pd">
+		select star,count(distinct distribute_id) starnum from bs_distribute where status = 4 group by
+		star
+	</select>
+	<!-- 通过ID获取数据 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where
+		ORDER_ID = #{ORDER_ID}
+	</select>
+	<select id="data13listPage" parameterType="page" resultType="pd">
+		select tmp.user_id,tmp.ctime,tmp.star,
+		u.name,
+		d.department_name,
+		u.phone
+		from 
+		(SELECT
+			m.user_id user_id,
+			m.ctime ctime,
+			du.user_id userId,
+			d.star star
+			FROM
+			bs_distribute AS d
+			INNER JOIN bs_meeting AS m ON m.meeting_id = d.rid
+			inner join bs_distribute_user du on du.distribute_id = d.distribute_id
+		union 
+		SELECT
+			o.user_id user_id,
+			o.ctime ctime,
+			du.user_id userId,
+			d.star star
+			FROM
+			bs_distribute AS d
+			INNER JOIN bs_order AS o ON o.order_id = d.rid
+			inner join bs_distribute_user du on du.distribute_id = d.distribute_id
+		) tmp 
+		inner join sys_user u on u.user_id = tmp.user_id
+		left join bs_department_station_user dsu on dsu.user_id = tmp.user_id
+		left join bs_department d on
+		d.DEPARTMENT_ID = dsu.DEPARTMENT_ID
+		where tmp.userId = #{pd.userId} and tmp.star = #{pd.star}
+	</select>
+	<select id="data12listPage" parameterType="page" resultType="pd">
+		SELECT
+			m.material_id,
+			m.brand,
+			m.model,
+			m.param,
+			mt.MATERIAL_TYPE_NAME AS material_type_name,
+			mn.MATERIAL_NAME AS material_name
+			FROM
+			bs_material AS m
+			INNER JOIN
+			bs_materialtype AS mt
+			ON
+			mt.materialtype_id = m.materialtype_id
+			INNER JOIN bs_materialname AS mn ON mn.MATERIALNAME_ID = m.materialname_id
+			inner join bs_order o on o.materialname_ids like concat('%',m.material_id,'%')
+			where o.servicetype_id = '710d2a9f46d54573a416edebb8f18a43'<!-- 设备服务 -->
+			<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+
+			m.brand LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+
+
+		</if>
+	</select>
+	<!-- 列表 -->
+	<select id="data11listPage" parameterType="page" resultType="pd">
+		select 
+		bd.distribute_Id,
+		bd.rid,
+		bd.user_id,
+		bd.important,
+		st.servicetype_name,
+		u.name,
+		d.department_name,
+		u.phone
+		from bs_distribute bd
+		inner join sys_user u on u.user_id = bd.user_id
+		left join bs_department_station_user dsu on dsu.user_id = bd.user_id
+		left join bs_department d on
+		d.DEPARTMENT_ID = dsu.DEPARTMENT_ID
+		left join bs_servicetype st on st.SERVICETYPE_ID = bd.SERVICETYPE_ID
+		where bd.status = 4 
+		<if test="pd.star != null">
+			and bd.star = #{pd.star}
+		</if>
+	</select>
+	
+	<!-- 列表 -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		select
+		o.INFOR,
+		o.MATERIAL_NAMES,
+		o.CTIME,
+		o.USER_ID,
+		o.SERVICETYPE_ID,
+		o.MATERIALNAME_IDS,
+		o.ORDER_ID,
+		u.NAME,
+		u.PHONE,
+		st.SERVICETYPE_NAME,
+		d.DEPARTMENT_NAME,
+		bd.STATUS,
+		bd.CONTENT,
+		bd.STAR,
+		o.HANDLER_INFO,
+		bd.USER_ID AUSER_ID,
+		bd.IMPORTANT
+		from
+		<include refid="tableName"></include>
+		o
+		inner join sys_user u on u.user_id = o.user_id
+		left join bs_department_station_user dsu on dsu.user_id = o.user_id
+		left join bs_department d on
+		d.DEPARTMENT_ID = dsu.DEPARTMENT_ID
+		left join bs_servicetype st on st.SERVICETYPE_ID = o.SERVICETYPE_ID
+		left join bs_distribute bd on bd.rid =
+		o.order_id
+		where 1=1
+		<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+
+			u.NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+
+
+		</if>
+		<if test="pd.SERVICETYPE_ID != null and pd.SERVICETYPE_ID != ''">
+			and o.SERVICETYPE_ID = #{pd.SERVICETYPE_ID}
+		</if>
+		<if test="pd.lastStart!= null and pd.lastStart != ''">
+			and date_format(o.CTIME,'%Y-%m-%d') = #{pd.lastStart}
+		</if>
+		<if test="pd.ORDER_ID != null and pd.ORDER_ID != ''">
+			and o.ORDER_ID = #{pd.ORDER_ID}
+		</if>
+		<if test="pd.STATUS != null and pd.STATUS != ''">
+			<if test="pd.STATUS == 0">
+				and bd.status is NULL
+			</if>
+			<if test="pd.STATUS == 1">
+				and bd.status in (1,2)
+			</if>
+			<if test="pd.STATUS == 3">
+				and bd.status in (3,4)
+			</if>
+		</if>
+		order by o.CTIME desc
+	</select>
+	<select id="repair" resultType="pd" parameterType="pd"><!-- 服务类型为设备 -->
+		select materialname_ids materialnameIds from bs_order where servicetype_id = '710d2a9f46d54573a416edebb8f18a43' and materialname_ids is not null
+	</select>
+	<select id="lost" resultType="pd" parameterType="pd"><!-- 服务类型为设备 -->
+		select ifnull(count(mo.material_order_id),0) count,mo.apply_user_id userId,u.name from bs_material_order mo
+		inner join sys_user u on u.user_id = mo.apply_user_id
+		 where mo.type = 2 group by mo.apply_user_id
+		 order by ifnull(count(mo.material_order_id),0) desc
+	</select>
+	<!-- 列表(全部) -->
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+	</select>
+	<select id="work" parameterType="pd" resultType="pd">
+		select du.user_id userId,u.name,s.station_name stationName,d.star,COUNT(du.distribute_id) starNum from bs_distribute_user du inner JOIN
+		bs_distribute
+		d on d.distribute_id = du.distribute_id
+		INNER JOIN sys_user u on u.USER_ID = du.user_id
+		INNER JOIN bs_department_station_user dsu on
+		dsu.user_id =
+		u.USER_ID
+		INNER JOIN bs_station s on s.station_id = dsu.station_id
+		where d.`status` = 4 and d.star is not null
+		<if test="name != null and name != ''">
+			and u.name like concat('%',#{name},'%')
+		</if>
+		<if test="stationId != null and stationId != ''">
+			and s.station_id =#{stationId}
+		</if>
+		GROUP BY du.user_id,d.star
+	</select>
+	<select id="time" resultType="pd" parameterType="pd">
+		select ctime,user_id userId,rid,type from bs_message where
+		rid in
+		<foreach collection="rids" item="item" open="(" close=")" separator=",">
+			#{item}
+		</foreach>
+		and (type = '10008' or type = '10009' or type = '10010' or type = '10011' or type = '10005')
+	</select>
+	<select id="alldis" resultType="pd" parameterType="pd">
+		select d.rid,du.user_id userId from bs_distribute d inner join bs_distribute_user du on du.distribute_id = d.distribute_id
+		where
+		du.user_id in
+		<foreach collection="userIds" item="item" open="(" close=")" separator=",">
+			#{item}
+		</foreach>
+	</select>
+	<select id="apply" parameterType="pd" resultType="pd">
+		select tmp.departmentId,tmp.ctime,d.department_name departmentName,tmp.servicetypeId,st.servicetype_name
+		servicetypeName,tmp.cnt from(
+		select
+		dsu.department_id departmentId,o.ctime,o.servicetype_id servicetypeId, count(o.order_id) cnt from bs_order o
+		inner join sys_user u on u.user_id =
+		o.user_id
+		left JOIN
+		bs_department_station_user dsu
+		on dsu.user_id = u.user_id
+
+		GROUP BY dsu.department_id,o.servicetype_id
+		UNION
+		select dsu.department_id
+		departmentId,m.ctime,m.servicetype_id servicetypeId, count(m.meeting_id) cnt from
+		bs_meeting m
+		inner join sys_user u on u.user_id = m.user_id
+		left JOIN
+		bs_department_station_user dsu on dsu.user_id =
+		u.user_id
+		GROUP BY dsu.department_id,m.servicetype_id
+		) tmp
+		INNER JOIN
+		bs_department d on d.department_id
+		= tmp.departmentId
+		INNER JOIN bs_servicetype
+		st on st.servicetype_id = tmp.servicetypeId
+		where 1=1
+		<if test="departmentId != null and departmentId !=''">
+			and tmp.departmentId = #{departmentId}
+		</if>
+		<if test="startDate != null and startDate !=''">
+			and tmp.ctime &gt;=#{startDate}
+		</if>
+		<if test="endDate != null and endDate !=''">
+			and tmp.ctime &lt;= #{endDate}
+		</if>
+	</select>
+	<select id="dataAlistPage" parameterType="page" resultType="pd">
+		select result.* from(select
+		null materialNames,
+		null infor,
+		m.USER_ID userId,
+		m.CTIME
+		ctime,
+		u.NAME name,
+		d.DEPARTMENT_NAME departmentName,
+		d.DEPARTMENT_ID
+		departmentId,
+		st.SERVICETYPE_NAME servicetypeName,
+		st.SERVICETYPE_ID servicetypeId
+		from bs_meeting m
+		inner join sys_user u on u.user_id = m.user_id
+		left
+		join
+		bs_department_station_user dsu on dsu.user_id = u.user_id
+		left join bs_department d on d.DEPARTMENT_ID = dsu.DEPARTMENT_ID
+		left join
+		bs_servicetype st
+		on st.SERVICETYPE_ID = m.SERVICETYPE_ID
+		union
+		select
+		o.material_names materialNames,
+		o.infor infor,
+		o.USER_ID userId,
+		o.CTIME ctime,
+		u.NAME name,
+		d.DEPARTMENT_NAME departmentName,
+		d.DEPARTMENT_ID departmentId,
+		st.SERVICETYPE_NAME servicetypeName,
+		st.SERVICETYPE_ID servicetypeId
+		from
+		bs_order o
+		inner join sys_user u on u.user_id = o.user_id
+		left join bs_department_station_user
+		dsu on dsu.user_id = u.user_id
+		left join bs_department d
+		on d.DEPARTMENT_ID = dsu.DEPARTMENT_ID
+		left join bs_servicetype st on st.SERVICETYPE_ID =
+		o.SERVICETYPE_ID
+		) result
+		where 1=1
+		<if test="pd.departmentId != null and pd.departmentId !=''">
+			and result.departmentId = #{pd.departmentId}
+		</if>
+		<if test="pd.servicetypeId != null and pd.servicetypeId !=''">
+			and result.servicetypeId = #{pd.servicetypeId}
+		</if>
+		<if test="pd.startDate != null and pd.startDate !=''">
+			and result.ctime &gt;=#{pd.startDate}
+		</if>
+		<if test="pd.endDate != null and pd.endDate !=''">
+			and result.ctime &lt;= #{pd.endDate}
+		</if>
+		order by result.ctime desc
+	</select>
+	<!-- 批量删除 -->
+	<delete id="deleteAll" parameterType="String">
+		delete from
+		<include refid="tableName"></include>
+		where
+		ORDER_ID in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	<select id="timePds" parameterType="pd" resultType="pd">
+		select m.ctime,m.type,m.rid from bs_message m where rid in 
+		<foreach collection="rids" item="item" open="(" close=")" separator=",">#{item}</foreach>
+		and m.type in ('10005','10009','10011')
+	</select>
+	<!-- fh313596790qq(青苔) -->
+</mapper>

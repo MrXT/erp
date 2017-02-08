@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MaterialOrderMapper">
+
+	<!--表名 -->
+	<sql id="tableName">
+		BS_MATERIAL_ORDER
+	</sql>
+
+	<!-- 字段 -->
+	<sql id="Field">
+		MATERIAL_ID,
+		MATERIALTYPE_ID,
+		APPLY_USER_ID,
+		MATERIALNAME_ID,
+		REMARK,
+		PICURL,
+		UTIME,
+		MATERIAL_ORDER_ID
+	</sql>
+
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{MATERIAL_ID},
+		#{MATERIALTYPE_ID},
+		#{APPLY_USER_ID},
+		#{MATERIALNAME_ID},
+		#{REMARK},
+		#{PICURL},
+		#{UTIME},
+		#{MATERIAL_ORDER_ID}
+	</sql>
+
+	<!-- 新增 -->
+	<insert id="save" parameterType="pd">
+		insert into
+		<include refid="tableName"></include>
+		(
+		<include refid="Field"></include>
+		) values (
+		<include refid="FieldValue"></include>
+		)
+	</insert>
+
+	<!-- 删除 -->
+	<delete id="delete" parameterType="pd">
+		delete from
+		<include refid="tableName"></include>
+		where
+		MATERIAL_ORDER_ID = #{MATERIAL_ORDER_ID}
+	</delete>
+
+	<!-- 修改 -->
+	<update id="edit" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		MATERIAL_ID = #{MATERIAL_ID},
+		MATERIALTYPE_ID = #{MATERIALTYPE_ID},
+		APPLY_USER_ID = #{APPLY_USER_ID},
+		MATERIALNAME_ID = #{MATERIALNAME_ID},
+		REMARK = #{REMARK},
+		PICURL = #{PICURL},
+		UTIME = #{UTIME},
+		MATERIAL_ORDER_ID = MATERIAL_ORDER_ID
+		where
+		MATERIAL_ORDER_ID = #{MATERIAL_ORDER_ID}
+	</update>
+	
+	<!-- 修改 -->
+	<update id="updateStatus" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		handel_user_id = #{HANDEL_USER_ID},
+		STATUS = #{STATUS},
+		UTIME = now()
+		where
+		MATERIAL_ORDER_ID = #{MATERIALORDER_ID}
+	</update>
+
+	<!-- 通过ID获取数据 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>,
+		TYPE
+		from
+		<include refid="tableName"></include>
+		where
+		MATERIAL_ORDER_ID = #{MATERIALORDER_ID}
+	</select>
+
+	<!-- 列表 -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		select
+		mo.MATERIAL_ID,
+		<if test="pd.TYPE == 2">
+			mo.MATERIALTYPE_ID,
+			mo.MATERIALNAME_ID,
+		</if>
+		<if test="pd.TYPE == 1">
+			mt.MATERIAL_TYPE_NAME MATERIALTYPE_ID,
+			mn.MATERIAL_NAME MATERIALNAME_ID,
+		</if>
+		d.DEPARTMENT_NAME,
+		mo.APPLY_USER_ID,
+		u.NAME,
+		mo.REMARK,
+		mo.PICURL,
+		mo.UTIME,
+		mo.MATERIAL_ORDER_ID
+		from
+		<include refid="tableName"></include>
+		mo
+		<if test="pd.TYPE == 1">
+			inner join bs_materialtype mt on mt.MATERIALTYPE_ID = mo.MATERIALTYPE_ID
+			inner join bs_materialname mn on mn.MATERIALNAME_ID =
+			mo.MATERIALNAME_ID
+		</if>
+		inner join sys_user u on u.user_id = mo.apply_user_id
+		LEFT join bs_department_station_user dsu on dsu.user_id = mo.apply_user_id
+		LEFT join bs_department d on d.department_id = dsu.department_id
+		where 1=1
+		<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			<if test="pd.TYPE == 1">
+				mt.MATERIAL_TYPE_NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				or
+				mn.MATERIAL_NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			</if>
+			<if test="pd.TYPE == 2">
+				mo.MATERIALTYPE_ID LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+				or
+				mo.MATERIALNAME_ID LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			</if>
+			or u.NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			)
+		</if>
+		<if test="pd.TYPE!= null and pd.TYPE != ''"><!-- 关键词检索 -->
+			and mo.type = #{pd.TYPE}
+		</if>
+		<if test="pd.STATUS!= null and pd.STATUS != ''"><!-- 关键词检索 -->
+			and mo.status = #{pd.STATUS}
+		</if>
+		ORDER by mo.utime desc
+	</select>
+
+	<!-- 列表(全部) -->
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+	</select>
+
+	<!-- 批量删除 -->
+	<delete id="deleteAll" parameterType="String">
+		delete from
+		<include refid="tableName"></include>
+		where
+		MATERIAL_ORDER_ID in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+
+	<!-- fh313596790qq(青苔) -->
+</mapper>

@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MaterialMapper">
+
+	<!--表名 -->
+	<sql id="tableName">
+		BS_MATERIAL
+	</sql>
+
+	<!-- 字段 -->
+	<sql id="Field">
+		MATERIALTYPE_ID,
+		MATERIALNAME_ID,
+		BRAND,
+		MODEL,
+		PARAM,
+		PRICE,
+		DEPOSIT_OFFICE,
+		DEPOSIT_FLOOR,
+		DEPOSIT_HOUSE,
+		USER_ID,
+		MATERIAL_ID,
+		REMARK,
+		CTIME,
+		IS_NEED_SERIAL,
+		serial_number,
+		STATUS
+	</sql>
+
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{MATERIALTYPE_ID},
+		#{MATERIALNAME_ID},
+		#{BRAND},
+		#{MODEL},
+		#{PARAM},
+		#{PRICE},
+		#{DEPOSIT_OFFICE},
+		#{DEPOSIT_FLOOR},
+		#{DEPOSIT_HOUSE},
+		#{USER_ID},
+		#{MATERIAL_ID},
+		#{REMARK},
+		now(),
+		#{IS_NEED_SERIAL},
+		#{serial_number},
+		#{STATUS}
+	</sql>
+
+	<!-- 新增 -->
+	<insert id="save" parameterType="pd">
+		insert into
+		<include refid="tableName"></include>
+		(
+		<include refid="Field"></include>
+		) values (
+		<include refid="FieldValue"></include>
+		)
+	</insert>
+
+	<!-- 删除 -->
+	<delete id="delete" parameterType="pd">
+		delete from
+		<include refid="tableName"></include>
+		where
+		MATERIAL_ID = #{MATERIAL_ID}
+	</delete>
+	<!-- 修改 -->
+	<update id="updateStatus" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		STATUS = #{STATUS}
+		where 1 =1
+		<if test="MATERIAL_ID != null">
+			and MATERIAL_ID = #{MATERIAL_ID}
+		</if>
+		<if test="ids != null">
+			and MATERIAL_ID in
+			<foreach item="item" index="index" collection="ids" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+
+
+	</update>
+	<!-- 修改 -->
+	<update id="edit" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		MATERIALTYPE_ID = #{MATERIALTYPE_ID},
+		MATERIALNAME_ID = #{MATERIALNAME_ID},
+		BRAND = #{BRAND},
+		MODEL = #{MODEL},
+		PARAM = #{PARAM},
+		PRICE = #{PRICE},
+		DEPOSIT_OFFICE = #{DEPOSIT_OFFICE},
+		DEPOSIT_FLOOR = #{DEPOSIT_FLOOR},
+		DEPOSIT_HOUSE = #{DEPOSIT_HOUSE},
+		USER_ID = #{USER_ID},
+		MATERIAL_ID = MATERIAL_ID
+		where
+		MATERIAL_ID = #{MATERIAL_ID}
+	</update>
+
+	<!-- 通过ID获取数据 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where
+		MATERIAL_ID = #{MATERIAL_ID}
+	</select>
+
+	<!-- 列表 -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		<if test="pd.status == 0">
+			SELECT
+			m.material_id,
+			m.materialtype_id,
+			m.materialname_id,
+			m.brand,
+			m.model,
+			m.param,
+			m.price,
+			m.deposit_office,
+			m.deposit_floor,
+			m.deposit_house,
+			m.remark,
+			m.ctime,
+			m.STATUS,
+			mt.MATERIAL_TYPE_NAME AS material_type_name,
+			mn.MATERIAL_NAME AS material_name
+			FROM
+			bs_material AS m
+			INNER JOIN
+			bs_materialtype AS mt
+			ON
+			mt.materialtype_id = m.materialtype_id
+			INNER JOIN bs_materialname AS mn ON mn.MATERIALNAME_ID = m.materialname_id
+			where
+			m.status in (${pd.STATUS})
+			<if test="pd.MATERIALTYPE_ID!= null and pd.MATERIALTYPE_ID!= ''"><!-- 关键词检索 -->
+				and m.materialtype_id = #{pd.MATERIALTYPE_ID}
+			</if>
+			<if test="pd.MATERIALNAME_ID!= null and pd.MATERIALNAME_ID!= ''"><!-- 关键词检索 -->
+				and m.materialname_id = #{pd.MATERIALNAME_ID}
+			</if>
+			<if test="pd.islock == 1"><!-- 关键词检索 -->
+				and m.status = 5
+			</if>
+			<if test="pd.islock == 2"><!-- 关键词检索 -->
+				and m.status = 0
+			</if>
+		</if>
+		<if test="pd.status != 0">
+			SELECT
+			distinct
+			m.material_id,
+			m.materialtype_id,
+			m.materialname_id,
+			m.brand,
+			m.model,
+			m.param,
+			m.price,
+			<if test="pd.STATUS == 6 || pd.STATUS == 7 || pd.STATUS == 4">
+				u.name,
+				m.USER_ID,
+				u.area deposit_office,
+				u.floor deposit_floor,
+				u.office_no deposit_house,
+			</if>
+			<if test="pd.STATUS != 6 and pd.STATUS !=4 and pd.STATUS != 7">
+				m.deposit_office,
+				m.deposit_floor,
+				m.deposit_house,
+			</if>
+			m.remark,
+			m.ctime,
+			m.STATUS,
+			mt.MATERIAL_TYPE_NAME AS material_type_name,
+			mn.MATERIAL_NAME AS material_name,
+			<!-- <if test="pd.STATUS == 2">报损 ,挂失记录找挂失人 -->
+			<!-- u1.name reportUserName, -->
+			<!-- </if> -->
+			m.serial_number
+			FROM
+			bs_material AS m
+			<if test="pd.STATUS == 6 || pd.STATUS == 4">
+				inner join sys_user u on u.user_id = m.user_id
+			</if>
+			INNER JOIN bs_materialtype
+			AS mt ON mt.materialtype_id = m.materialtype_id
+			INNER JOIN bs_materialname AS mn ON
+			mn.MATERIALNAME_ID = m.materialname_id
+			<!-- <if test="pd.STATUS == 2">报损 ,挂失记录找挂失人 -->
+			<!-- left JOIN bs_material_order AS mo ON mo.MATERIAL_ID like concat('%', m.material_id,'%') -->
+			<!-- left join sys_user u1 on u1.user_id = mo.apply_user_id -->
+			<!-- </if> -->
+			where m.status = #{pd.STATUS}
+			<if test="pd.MATERIALTYPE_ID!= null and pd.MATERIALTYPE_ID!= ''"><!-- 关键词检索 -->
+				and m.materialtype_id = #{pd.MATERIALTYPE_ID}
+			</if>
+			<if test="pd.MATERIALNAME_ID!= null and pd.MATERIALNAME_ID!= ''"><!-- 关键词检索 -->
+				and m.materialname_id = #{pd.MATERIALNAME_ID}
+			</if>
+			<!-- <if test="pd.STATUS == 2">报损 ,挂失记录找挂失人 -->
+			<!-- and (mo.type = 2 or mo.type=3) -->
+			<!-- </if> -->
+		</if>
+		order by m.ctime desc
+	</select>
+
+	<select id="data11listPage" parameterType="page" resultType="pd">
+		SELECT
+		m.material_id,
+		m.materialtype_id,
+		m.materialname_id,
+		m.brand,
+		m.model,
+		m.param,
+		m.price,
+		m.ctime,
+		mt.MATERIAL_TYPE_NAME AS material_type_name,
+		mn.MATERIAL_NAME AS material_name
+		FROM
+		bs_material AS m
+		INNER JOIN
+		bs_materialtype AS mt
+		ON
+		mt.materialtype_id = m.materialtype_id
+		INNER JOIN bs_materialname AS mn ON mn.MATERIALNAME_ID = m.materialname_id
+		where
+		m.status in (${pd.STATUS})
+	</select>
+
+	<!-- 列表(全部) -->
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+		m.MATERIALTYPE_ID,
+		m.MATERIALNAME_ID,
+		m.BRAND,
+		m.MODEL,
+		m.PARAM,
+		m.PRICE,
+		<if test="status != 0">
+				u.NAME,
+				m.USER_ID,
+				u.area DEPOSIT_OFFICE,
+				u.floor DEPOSIT_FLOOR,
+				u.office_no DEPOSIT_HOUSE,
+			</if>
+		<if test="status == 0">
+				m.DEPOSIT_OFFICE,
+			m.DEPOSIT_FLOOR,
+			m.DEPOSIT_HOUSE,
+			</if>
+		m.USER_ID,
+		m.MATERIAL_ID,
+		m.REMARK,
+		m.CTIME,
+		m.IS_NEED_SERIAL,
+		m.serial_number,
+		m.STATUS,
+		mn.MATERIAL_NAME AS MATERIAL_NAME,
+		mt.MATERIAL_TYPE_NAME AS MATERIAL_TYPE_NAME,
+		u.NAME AS
+		NAME,
+		d.department_name DEPARTMENT_NAME
+		from
+		<include refid="tableName"></include>
+		m
+		INNER JOIN bs_materialname AS mn ON
+		mn.MATERIALNAME_ID = m.materialname_id
+		INNER JOIN bs_materialtype
+		AS mt ON mt.materialtype_id = m.materialtype_id
+		left join sys_user u on u.user_id = m.user_id
+		left join bs_department_station_user dsu on dsu.user_id =
+		u.user_id
+		left join bs_department d on
+		d.DEPARTMENT_ID = dsu.DEPARTMENT_ID
+		where 1 =1
+		<if test="USER_ID!=null and USER_ID!=''">
+			and m.user_id = #{USER_ID} and (m.status = 4 or m.status = 7 or m.status = 6)
+		</if>
+		<if test="STATUS != null and STATUS != ''">
+			and m.status in (${STATUS})
+		</if>
+		order by m.ctime desc
+	</select>
+	<select id="queryMaterialByIds" parameterType="pd" resultType="pd">
+		select brand,count(material_id) repairNum from bs_material
+		where material_id in
+		<foreach item="item" collection="materialIds" close=")" open="(" separator=",">
+			#{item}
+		</foreach>
+		GROUP BY brand
+	</select>
+	<!-- 批量删除 -->
+	<delete id="deleteAll" parameterType="String">
+		delete from
+		<include refid="tableName"></include>
+		where
+		MATERIAL_ID in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	<select id="material" parameterType="pd" resultType="pd">
+		select ifnull(count(m.material_id),0) count,sum(m.PRICE) sum,status from 
+		bs_material AS m
+		INNER JOIN
+		bs_materialtype AS mt
+		ON
+		mt.materialtype_id = m.materialtype_id
+		INNER JOIN bs_materialname AS mn ON mn.MATERIALNAME_ID = m.materialname_id
+		 where m.status in
+		(0,1,4,7,2,3)  group by m.status
+	</select>
+	<select id="scanDetail" parameterType="pd" resultType="pd">
+		select ifnull(count(material_id),0) count,mn.material_name materialName from bs_material m inner join bs_materialname mn on mn.materialname_id =
+		m.materialname_id where
+		<if test="type == 2">
+			status in (0,1,4,7)
+		</if>
+		<if test="type == 1">
+			status in (0,1)
+		</if>
+		<if test="type == 3">
+			status =7
+		</if>
+		<if test="type == 4">
+			status =4
+		</if>
+		group by mn.material_name
+	</select>
+	<!-- fh313596790qq(青苔) -->
+</mapper>

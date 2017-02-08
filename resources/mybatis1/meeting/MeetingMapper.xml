@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MeetingMapper">
+
+	<!--表名 -->
+	<sql id="tableName">
+		BS_MEETING
+	</sql>
+
+	<!-- 字段 -->
+	<sql id="Field">
+		SERVICETYPE_ID,
+		MEETINGROOM_ID,
+		USER_ID,
+		START_DATE,
+		END_DATE,
+		CTIME,
+		INFOR,
+		MEETING_NAME,
+		MEETING_ID
+	</sql>
+
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{SERVICETYPE_ID},
+		#{MEETINGROOM_ID},
+		#{USER_ID},
+		#{START_DATE},
+		#{END_DATE},
+		#{CTIME},
+		#{INFOR},
+		#{MEETING_NAME},
+		#{MEETING_ID}
+	</sql>
+
+	<!-- 新增 -->
+	<insert id="save" parameterType="pd">
+		insert into
+		<include refid="tableName"></include>
+		(
+		<include refid="Field"></include>
+		) values (
+		<include refid="FieldValue"></include>
+		)
+	</insert>
+
+	<!-- 新增 -->
+	<insert id="saveMessage" parameterType="pd">
+		insert into
+		bs_message
+		(MESSAGE_ID,type,user_id,content,rid
+		) values
+		(null,#{TYPE},#{USER_ID},#{CONTENT},#{RID}
+		)
+	</insert>
+	<!-- 新增 -->
+	<insert id="saveUser" parameterType="pd">
+		insert into
+		bs_distribute_user
+		(distribute_user_id,distribute_id,user_id
+		) values
+		(null,#{distributeId},#{userId}
+		)
+	</insert>
+	<!-- 新增 -->
+	<insert id="saveDistibute" parameterType="pd">
+		insert into
+		bs_distribute
+		(distribute_id,rid,user_id,status,IMPORTANT,servicetype_id,remark,date
+		)
+		values (#{distributeId},#{rid},#{userId},#{status},#{IMPORTANT},#{servicetype_id},#{remark},#{date}
+		)
+	</insert>
+	<!-- 删除 -->
+	<delete id="delete" parameterType="pd">
+		<if test="type==1">
+			delete from
+			bs_distribute
+			where
+			rid = #{MEETING_ID}
+		</if>
+		<if test="type==2">
+			delete from
+			bs_meeting
+			where
+			meeting_id = #{MEETING_ID}
+		</if>
+	</delete>
+
+	<!-- 修改 -->
+	<update id="edit" parameterType="pd">
+		update
+		bs_distribute
+		set
+		<if test="STATUS !=null">
+			STATUS = #{STATUS},
+		</if>
+		<if test="CONTENT !=null">
+			CONTENT = #{CONTENT},
+		</if>
+		<if test="STAR !=null">
+			STAR = #{STAR},
+		</if>
+		distribute_id = distribute_id
+		where
+		rid = #{MEETING_ID}
+	</update>
+
+	<!-- 通过ID获取数据 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+		where
+		MEETING_ID = #{MEETING_ID}
+	</select>
+	<select id="listUserByPd" parameterType="pd" resultType="pd">
+		select u.user_id userId,
+		u.name name
+		from sys_user u
+		inner join bs_distribute_user du on
+		du.user_id = u.user_id
+		inner join bs_distribute d on d.distribute_id = du.distribute_id
+		where d.rid = #{meetingId}
+	</select>
+	<!-- 列表 -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		select
+		distinct
+		m.SERVICETYPE_ID,
+		m.MEETINGROOM_ID,
+		m.USER_ID,
+		m.START_DATE,
+		m.END_DATE,
+		m.CTIME,
+		m.INFOR,
+		m.MEETING_NAME,
+		m.MEETING_ID,
+		u.NAME,
+		u.PHONE,
+		u.CPHONE,
+		st.SERVICETYPE_NAME,
+		mr.MEETINGROOM_NAME,
+		mr.AREA,
+		d.DEPARTMENT_NAME,
+		bd.STATUS,
+		bd.CONTENT,
+		bd.STAR,
+		bd.USER_ID AUSER_ID,
+		bd.IMPORTANT
+		from
+		<include refid="tableName"></include>
+		m
+		inner join sys_user u on u.user_id = m.user_id
+		left join bs_department_station_user dsu on dsu.user_id = m.user_id
+		left join bs_department d on
+		d.DEPARTMENT_ID = dsu.DEPARTMENT_ID
+		left join bs_servicetype st on st.SERVICETYPE_ID = m.SERVICETYPE_ID
+		inner join bs_meetingroom mr on
+		mr.MEETINGROOM_ID = m.MEETINGROOM_ID
+		left join bs_distribute bd on bd.rid = m.meeting_id
+		where 1=1
+		<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			(
+			<!-- mr.MEETINGROOM_NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') -->
+			<!-- or -->
+			<!-- m.MEETING_NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') -->
+			<!-- or -->
+			u.NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+			<!-- 根据需求自己加检索条件 字段1 LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') or 字段2 LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%') -->
+			)
+		</if>
+		<if test="pd.MEETING_ID != null and pd.MEETING_ID != ''">
+			and m.MEETING_ID = #{pd.MEETING_ID}
+		</if>
+		<if test="pd.STATUS != null and pd.STATUS != ''">
+			<if test="pd.STATUS == 0">
+				and bd.status is NULL
+			</if>
+			<if test="pd.STATUS == 1">
+				and bd.status in (1,2)
+			</if>
+			<if test="pd.STATUS == 3">
+				and bd.status in (3,4)
+			</if>
+		</if>
+		<if test="pd.MEETINGROOM_NAME != null">
+			and mr.MEETINGROOM_NAME like concat('%',#{pd.MEETINGROOM_NAME},'%')
+		</if>
+		<if test="pd.lastStart!= null and pd.lastStart != ''">
+			and date_format(m.start_date,'%Y-%m-%d') &lt;= #{pd.lastStart} and date_format(m.end_date,'%Y-%m-%d') &gt;=#{pd.lastStart}
+		</if>
+		order by m.ctime desc
+	</select>
+
+	<!-- 列表(全部) -->
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+	</select>
+
+	<!-- 批量删除 -->
+	<delete id="deleteAll" parameterType="String">
+		delete from
+		<include refid="tableName"></include>
+		where
+		MEETING_ID in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+	<select id="detail" parameterType="pd" resultType="pd">
+		select meeting_id meetingId,meeting_name meetingName,infor,mr.area,start_date startDate,end_date endDate from bs_meeting m
+		inner join bs_meetingroom
+		mr on
+		mr.MEETINGROOM_ID = m.MEETINGROOM_ID
+		<if test="meetingId == null or meetingId == ''">
+			where start_date &gt;= #{date} or start_date &lt;= #{date} and end_date &gt;= #{date} and user_id =#{userId}
+			order by (start_date -
+			#{date}) asc
+		</if>
+		<if test="meetingId != null and meetingId != ''">
+			where meeting_id = #{meetingId}
+		</if>
+		limit 1
+	</select>
+	<select id="selectUsers" parameterType="pd" resultType="pd">
+		select mu.meeting_id meetingId,mu.type type,mu.ctime ctime,u.NAME name,u.USER_ID
+		userId,u.phone,u.cphone,d.department_name departmentName from bs_meeting_user mu
+		inner join sys_user u on u.user_id = mu.user_id
+		left join
+		bs_department_station_user dsu on dsu.user_id = mu.user_id
+		left join bs_department d on
+		d.DEPARTMENT_ID = dsu.DEPARTMENT_ID
+		where mu.meeting_id =
+		#{meetingId}
+		order by ctime desc
+	</select>
+	<select id="datasignslistPage" parameterType="page" resultType="pd">
+		select meeting_id meetingId,meeting_name meetingName,infor,mr.area,start_date startDate,end_date endDate,
+		(select count(mu.user_id) from
+		bs_meeting_user mu where mu.meeting_id = m.meeting_id and mu.type = 1) applyCount,
+		u.name name,
+		(select count(mu.user_id) from bs_meeting_user mu where
+		mu.meeting_id = m.meeting_id and mu.type = 2) signCount
+		from bs_meeting m
+		inner join bs_meetingroom
+		mr on
+		mr.MEETINGROOM_ID = m.MEETINGROOM_ID
+		inner join sys_user u on u.user_id = m.user_id
+		where 1=1
+		<if test="pd.userId != null and pd.userId != ''">
+			and m.user_id = #{pd.userId}
+		</if>
+		<if test="pd.keywords != null and pd.keywords != ''">
+			and u.NAME like concat('%',#{pd.keywords},'%')
+		</if>
+		order by m.start_date desc,m.end_date desc
+	</select>
+	<select id="timePds" parameterType="pd" resultType="pd">
+		select m.ctime,m.type,m.rid from bs_message m where rid in 
+		<foreach collection="rids" item="item" open="(" close=")" separator=",">#{item}</foreach>
+		and m.type in ('10005','10008','10010')
+	</select>
+	<!-- fh313596790qq(青苔) -->
+</mapper>

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AccountMapper">
+
+	<!--表名 -->
+	<sql id="tableName">
+		BS_ACCOUNT
+	</sql>
+
+	<!-- 字段 -->
+	<sql id="Field">
+		USER_ID,
+		BALANCE,
+		ACCOUNT_ID
+	</sql>
+
+	<!-- 字段值 -->
+	<sql id="FieldValue">
+		#{USER_ID},
+		#{BALANCE},
+		#{ACCOUNT_ID}
+	</sql>
+
+	<!-- 新增 -->
+	<insert id="save" parameterType="pd">
+		insert into
+		<include refid="tableName"></include>
+		(
+		<include refid="Field"></include>
+		) values (
+		<include refid="FieldValue"></include>
+		)
+	</insert>
+	
+	<!-- 新增 -->
+	<insert id="saveSet" parameterType="pd">
+		insert into
+		bs_comsume_timeslot
+		(
+		comsume_timeslot_id,
+		start_date,
+		end_date,
+		first_money,
+		second_money
+		) values (
+		#{comsumeTimeslotId},
+		#{startDate},
+		#{endDate},
+		#{firstMoney},
+		#{secondMoney}
+		)
+	</insert>
+	<!-- 修改 -->
+	<update id="editSet" parameterType="pd">
+		update
+		bs_comsume_timeslot
+		set
+		start_date = #{startDate},
+		end_date=#{endDate},
+		first_money = #{firstMoney},
+		second_money = #{secondMoney}
+		where
+		comsume_timeslot_id = #{comsumeTimeslotId}
+	</update>
+
+
+
+	<!-- 删除 -->
+	<delete id="delete" parameterType="pd">
+		delete from
+		<include refid="tableName"></include>
+		where
+		ACCOUNT_ID = #{ACCOUNT_ID}
+	</delete>
+
+	<!-- 修改 -->
+	<update id="edit" parameterType="pd">
+		update
+		<include refid="tableName"></include>
+		set
+		BALANCE = #{BALANCE},
+		RECHANGE=#{RECHANGE},
+		ACCOUNT_ID = ACCOUNT_ID
+		where
+		ACCOUNT_ID = #{ACCOUNT_ID}
+	</update>
+
+	<!-- 通过ID获取数据 -->
+	<select id="findAllSet" parameterType="pd" resultType="pd">
+		SELECT
+		DATE_FORMAT(ct.start_date,'%H:%i') startDate,
+		DATE_FORMAT(ct.end_date,'%H:%i') endDate,
+		ct.first_money firstMoney,
+		ct.second_money secondMoney,
+		ct.comsume_timeslot_id comsumeTimeslotId
+		FROM
+		bs_comsume_timeslot AS ct
+		where 1=1
+		<if test="comsumeTimeslotId != null and comsumeTimeslotId !=''">
+			and ct.comsume_timeslot_id = #{comsumeTimeslotId}
+		</if>
+		order by ct.start_date asc,ct.end_date ASC
+	</select>
+
+	<!-- 通过ID获取数据 -->
+	<select id="findById" parameterType="pd" resultType="pd">
+		select
+		balance,
+		rechange,
+		comsume,
+		ACCOUNT_ID,
+		USER_ID
+		from
+		<include refid="tableName"></include>
+		where
+		ACCOUNT_ID = #{ACCOUNT_ID}
+	</select>
+
+	<!-- 列表 -->
+	<select id="datalistPage" parameterType="page" resultType="pd">
+		select
+		a.BALANCE,
+		a.ACCOUNT_ID,
+		u.NAME,
+		r.ROLE_NAME,
+		d.DEPARTMENT_NAME,
+		u.OFFICE_NO,
+		u.CPHONE
+		from
+		<include refid="tableName"></include>
+		a
+		INNER join sys_user u on u.USER_ID = a.USER_ID
+		LEFT join sys_role r on r.ROLE_ID = u.ROLE_ID
+		LEFT JOIN
+		bs_department_station_user AS dsu ON
+		dsu.USER_ID = u.USER_ID
+		LEFT JOIN bs_department AS d ON d.department_id = dsu.department_id
+		where u.USERNAME !=
+		'admin'
+		<if test="pd.keywords!= null and pd.keywords != ''"><!-- 关键词检索 -->
+			and
+			u.NAME LIKE CONCAT(CONCAT('%', #{pd.keywords}),'%')
+		</if>
+		<if test="pd.DEPARTMENT_ID!= null and pd.DEPARTMENT_ID != ''"><!-- 关键词检索 -->
+			and
+			d.DEPARTMENT_ID = #{pd.DEPARTMENT_ID}
+		</if>
+	</select>
+
+	<!-- 列表(全部) -->
+	<select id="listAll" parameterType="pd" resultType="pd">
+		select
+		<include refid="Field"></include>
+		from
+		<include refid="tableName"></include>
+	</select>
+
+	<!-- 批量删除 -->
+	<delete id="deleteAll" parameterType="String">
+		delete from
+		<include refid="tableName"></include>
+		where
+		ACCOUNT_ID in
+		<foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</delete>
+
+	<!-- fh313596790qq(青苔) -->
+</mapper>
